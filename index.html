@@ -1,1 +1,683 @@
 
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摩斯密碼學習圖鑑</title>
+    <style>
+        :root { 
+            --primary: #212121; /* 深色背景 */
+            --secondary: #ffb300; /* 經典無線電琥珀黃 */
+            --bg: #eceff1; 
+            --card-bg: #fff; 
+            --accent: #ff9800;
+            --code-color: #37474f;
+        }
+        body { font-family: "Noto Sans TC", sans-serif; background: var(--bg); margin: 0; padding-bottom: 60px; color: #333; user-select: none; }
+        
+        header { background: #1a1a1a; color: var(--secondary); padding: 30px 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); position: relative; border-bottom: 3px solid var(--secondary); }
+        h1 { margin: 0; font-size: 2rem; letter-spacing: 2px; }
+        p { color: #aaa; font-size: 0.95rem; margin-top: 5px; font-family: monospace; }
+
+        /* 音效控制按鈕 */
+        .audio-ctrl { position: absolute; top: 20px; right: 20px; background: rgba(255,179,0,0.1); border: 1px solid var(--secondary); color: var(--secondary); padding: 5px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: 0.3s; display: flex; align-items: center; gap: 5px; }
+        .audio-ctrl:hover { background: var(--secondary); color: #000; }
+        .audio-ctrl.muted { opacity: 0.5; text-decoration: line-through; border-color: #666; color: #666; }
+
+        .nav { display: flex; justify-content: center; gap: 10px; padding: 15px; background: #fff; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-wrap: wrap; }
+        .nav-btn { padding: 8px 15px; border: 2px solid var(--primary); border-radius: 8px; background: transparent; color: var(--primary); font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .nav-btn.active { background: var(--primary); color: var(--secondary); }
+
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        .section { display: none; animation: fadeIn 0.5s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 每日一抽 */
+        .daily-card-container { perspective: 1000px; max-width: 350px; height: 450px; margin: 20px auto; cursor: pointer; }
+        .daily-card-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d; }
+        .daily-card-container.flipped .daily-card-inner { transform: rotateY(180deg); }
+        .daily-card-front, .daily-card-back { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 4px solid var(--primary); }
+        .daily-card-front { background: radial-gradient(circle, #424242, #212121); color: var(--secondary); display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .front-icon { font-size: 5rem; margin-bottom: 20px; }
+        .daily-card-back { background: #fff; transform: rotateY(180deg); display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle, #fff, #f0f0f0); }
+        .char-huge { font-size: 8rem; font-weight: bold; color: var(--primary); margin: 0; line-height: 1; }
+        .code-huge { font-size: 4rem; color: var(--secondary); font-weight: bold; letter-spacing: 5px; text-shadow: 1px 1px 2px #000; margin: 10px 0; }
+        .daily-tip { font-size: 1.1rem; color: #555; background: #eee; padding: 5px 15px; border-radius: 15px; margin-top: 10px; }
+
+        /* 列表 & 技巧 */
+        .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; justify-content: center; }
+        select, input { padding: 10px; border: 2px solid #ccc; border-radius: 8px; font-size: 1rem; outline: none; }
+        select:focus, input:focus { border-color: var(--secondary); }
+        
+        .tips-box { background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 30px; border-left: 6px solid var(--secondary); }
+        .tips-box h3 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+        .tip-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .tip-card h4 { margin: 0 0 10px 0; color: var(--accent); }
+        .tip-card p { font-size: 0.95rem; margin: 0; color: #555; line-height: 1.5; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .grid-item { background: #fff; padding: 20px 10px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; text-align: center; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; }
+        .grid-item:hover { transform: translateY(-5px); border-color: var(--secondary); box-shadow: 0 8px 15px rgba(255,179,0,0.2); }
+        .grid-item .char { font-size: 2.5rem; font-weight: bold; color: var(--primary); line-height: 1; margin-bottom: 5px; }
+        .grid-item .code { color: var(--code-color); font-weight: bold; font-size: 1.8rem; letter-spacing: 2px; }
+
+        /* 測驗 */
+        .quiz-box { max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
+        .quiz-type-badge { display: inline-block; background: var(--secondary); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; margin-bottom: 15px; }
+        
+        /* 播放按鈕 UI */
+        .play-btn-large { width: 100px; height: 100px; border-radius: 50%; background: var(--primary); color: var(--secondary); border: none; font-size: 3rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin: 20px 0; transition: 0.2s; box-shadow: 0 6px 15px rgba(0,0,0,0.2); }
+        .play-btn-large:hover { transform: scale(1.05); background: #333; }
+        .play-btn-large:active { transform: scale(0.95); }
+        .play-btn-large.playing { animation: pulse 1s infinite; pointer-events: none; opacity: 0.8; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,179,0,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,179,0,0); } 100% { box-shadow: 0 0 0 0 rgba(255,179,0,0); } }
+
+        .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 25px; }
+        .q-btn { padding: 18px; border: 2px solid #ddd; background: #fafafa; border-radius: 12px; cursor: pointer; font-size: 1.5rem; font-weight: bold; transition: 0.2s; color: var(--primary); letter-spacing: 2px; }
+        .q-btn:hover:not(:disabled) { background: #eee; border-color: var(--secondary); }
+        .q-btn.correct { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; animation: pop 0.3s; }
+        .q-btn.wrong { background: #ffebee; border-color: #ef5350; color: #c62828; animation: shake 0.4s; }
+
+        @keyframes pop { 0%{transform:scale(1);} 50%{transform:scale(1.05);} 100%{transform:scale(1);} }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
+        .modal-content { background: #fff; width: 100%; max-width: 400px; border-radius: 20px; overflow: hidden; text-align: center; animation: slideUp 0.3s; border: 4px solid var(--secondary); }
+        .modal-body { padding: 30px; }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📻 摩斯密碼學習圖鑑</h1>
+    <p>-- --- .-. ... . / -.-. --- -.. .</p>
+    <button class="audio-ctrl" onclick="SoundMgr.toggle()">🔊 音效: 開</button>
+</header>
+
+<div class="nav">
+    <button class="nav-btn active" onclick="setTab('daily', this)">📅 每日一碼</button>
+    <button class="nav-btn" onclick="setTab('quiz', this)">🎧 密碼測驗</button>
+    <button class="nav-btn" onclick="setTab('list', this)">📖 密碼圖鑑與技巧</button>
+</div>
+
+<div class="container">
+    <!-- 每日一碼 -->
+    <div id="tab-daily" class="section active">
+        <h2 style="text-align:center; color:var(--primary);">今日專屬密碼</h2>
+        <div class="daily-card-container" onclick="flipCard()">
+            <div class="daily-card-inner">
+                <div class="daily-card-front">
+                    <div class="front-icon">❓</div>
+                    <h2>點擊翻開</h2>
+                    <p>抽取今日幸運字母</p>
+                </div>
+                <div class="daily-card-back">
+                    <div class="char-huge" id="d-char"></div>
+                    <div class="code-huge" id="d-code"></div>
+                    <div class="daily-tip" id="d-tip"></div>
+                    <p style="font-size:0.85rem; color:#888; margin-top:20px;">(點擊卡片可再次聆聽音效)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 測驗 -->
+    <div id="tab-quiz" class="section">
+        <div class="quiz-box">
+            <div id="q-badge" class="quiz-type-badge">測驗類型</div>
+            
+            <!-- 題目區塊 -->
+            <div id="q-prompt-area">
+                <!-- 視測驗類型動態切換：文字或播放按鈕 -->
+                <h1 id="q-question-text" style="font-size:5rem; margin:10px 0; color:var(--primary); display:none;"></h1>
+                <button id="q-play-btn" class="play-btn-large" onclick="playQuizAudio()" style="display:none;">▶</button>
+                <p id="q-hint" style="color:#666; margin-top:10px;"></p>
+            </div>
+
+            <!-- 選項區塊 -->
+            <div id="q-options" class="quiz-options"></div>
+            
+            <div id="q-feedback" style="margin-top:20px; font-size:1.1rem; display:none; padding:10px; border-radius:8px;"></div>
+            <button id="next-btn" onclick="SoundMgr.playTone('click'); initQuiz()" style="margin-top:20px; padding:12px 40px; background:var(--primary); color:var(--secondary); border:none; border-radius:8px; cursor:pointer; font-size:1.1rem; font-weight:bold; display:none;">下一題 ➡</button>
+        </div>
+    </div>
+
+    <!-- 圖鑑與技巧 -->
+    <div id="tab-list" class="section">
+        
+        <!-- 記憶技巧區塊 -->
+        <div class="tips-box">
+            <h3>💡 摩斯密碼快速記憶技巧 (小撇步)</h3>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <h4>1. 全點與全劃 (極簡字)</h4>
+                    <p><b>全點：</b>E(.), I(..), S(...), H(....)<br>
+                       <b>全劃：</b>T(-), M(--), O(---)</p>
+                </div>
+                <div class="tip-card">
+                    <h4>2. 鏡像反轉法 (成對記憶)</h4>
+                    <p><b>A與N：</b>A是(.-) / N是(-.)<br>
+                       <b>D與U：</b>D是(-..) / U是(..-)<br>
+                       <b>W與G：</b>W是(.--) / G是(--.)</p>
+                </div>
+                <div class="tip-card">
+                    <h4>3. 三明治對稱法</h4>
+                    <p><b>R 與 K：</b>R是(.-.)短長短 / K是(-.-)長短長<br>
+                       <b>P 與 X：</b>P是(.--.) / X是(-..-)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增：硬幣二元樹解碼法 -->
+        <div class="tips-box">
+            <h3>🎖️ 接收端解碼樹 (Receive Side Tree) - 硬幣解碼法</h3>
+            <p style="color:#555; line-height:1.6; margin-bottom:15px;">
+                這是參考經典軍用摩斯密碼硬幣背面的<b>二元樹解碼法</b>。當你聽到一段密碼時，從中央的「★」出發：<br>
+                聽見<b>「點 ( . )」向左走</b>，聽見<b>「劃 ( - )」向右走</b>。跟著路徑走到底，就能瞬間解出英文字母！<br>
+                <span style="color:var(--accent); font-weight:bold;">💡 互動技巧：</span>將游標移到下方字母上方可快速試聽密碼，點擊字母可查看圖鑑說明。
+            </p>
+            <div id="svg-tree-container" style="overflow-x: auto; background: var(--primary); border-radius: 12px; padding: 20px 0; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); text-align: center;">
+                <!-- SVG Tree 將由 JS 動態生成 -->
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <select id="type-filter" onchange="renderList()">
+                <option value="all">全部 (字母+數字)</option>
+                <option value="letter">僅英文字母</option>
+                <option value="number">僅數字</option>
+            </select>
+            <input type="text" id="keyword" placeholder="輸入字母或密碼 (如 .-)" onkeyup="renderList()">
+        </div>
+        
+        <div id="list-grid" class="grid"></div>
+    </div>
+</div>
+
+<!-- 詳細資訊彈窗 -->
+<div id="modal" class="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-body">
+            <h1 id="m-char" style="font-size:5rem; margin:0; color:var(--primary);"></h1>
+            <div id="m-code" style="font-size:3rem; color:var(--secondary); font-weight:bold; letter-spacing:5px; margin:10px 0;"></div>
+            <div id="m-tip" style="background:#eee; display:inline-block; padding:8px 15px; border-radius:20px; color:#555; margin-bottom:20px;"></div>
+            <br>
+            <button onclick="playModalAudio()" style="padding:10px 20px; background:var(--primary); color:var(--secondary); border:none; border-radius:8px; cursor:pointer; font-weight:bold; margin-bottom:10px; width:100%;">🔊 播放音效</button>
+            <button onclick="closeModal()" style="width:100%; padding:10px; background:#ddd; color:#333; border:none; border-radius:8px; cursor:pointer;">關閉</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- 摩斯密碼資料庫 ---
+const morseData = [
+    // 字母
+    { char: 'A', code: '.-', type: 'letter', tip: '一短一長 (相反是N)' },
+    { char: 'B', code: '-...', type: 'letter', tip: '一長三短' },
+    { char: 'C', code: '-.-.', type: 'letter', tip: '長短長短 (交錯)' },
+    { char: 'D', code: '-..', type: 'letter', tip: '一長兩短 (相反是U)' },
+    { char: 'E', code: '.', type: 'letter', tip: '最短的字：一點' },
+    { char: 'F', code: '..-.', type: 'letter', tip: '兩短一長一短' },
+    { char: 'G', code: '--.', type: 'letter', tip: '兩長一短 (相反是W)' },
+    { char: 'H', code: '....', type: 'letter', tip: '四個點 (S的延伸)' },
+    { char: 'I', code: '..', type: 'letter', tip: '兩個點 (E的延伸)' },
+    { char: 'J', code: '.---', type: 'letter', tip: '一短三長' },
+    { char: 'K', code: '-.-', type: 'letter', tip: '長短長 (相反是R)' },
+    { char: 'L', code: '.-..', type: 'letter', tip: '一短一長兩短' },
+    { char: 'M', code: '--', type: 'letter', tip: '兩個長 (T的延伸)' },
+    { char: 'N', code: '-.', type: 'letter', tip: '一長一短 (相反是A)' },
+    { char: 'O', code: '---', type: 'letter', tip: '三個長 (最長的字母)' },
+    { char: 'P', code: '.--.', type: 'letter', tip: '外短內長 (對稱)' },
+    { char: 'Q', code: '--.-', type: 'letter', tip: '兩長一短一長' },
+    { char: 'R', code: '.-.', type: 'letter', tip: '短長短 (相反是K)' },
+    { char: 'S', code: '...', type: 'letter', tip: '三個點 (SOS的S)' },
+    { char: 'T', code: '-', type: 'letter', tip: '最短的劃：一長' },
+    { char: 'U', code: '..-', type: 'letter', tip: '兩短一長 (相反是D)' },
+    { char: 'V', code: '...-', type: 'letter', tip: '三短一長 (貝多芬命運交響曲)' },
+    { char: 'W', code: '.--', type: 'letter', tip: '一短兩長 (相反是G)' },
+    { char: 'X', code: '-..-', type: 'letter', tip: '外長內短 (對稱)' },
+    { char: 'Y', code: '-.--', type: 'letter', tip: '一長一短兩長' },
+    { char: 'Z', code: '--..', type: 'letter', tip: '兩長兩短' },
+    // 數字
+    { char: '1', code: '.----', type: 'number', tip: '1點4劃' },
+    { char: '2', code: '..---', type: 'number', tip: '2點3劃' },
+    { char: '3', code: '...--', type: 'number', tip: '3點2劃' },
+    { char: '4', code: '....-', type: 'number', tip: '4點1劃' },
+    { char: '5', code: '.....', type: 'number', tip: '5點 (全短)' },
+    { char: '6', code: '-....', type: 'number', tip: '1劃4點' },
+    { char: '7', code: '--...', type: 'number', tip: '2劃3點' },
+    { char: '8', code: '---..', type: 'number', tip: '3劃2點' },
+    { char: '9', code: '----.', type: 'number', tip: '4劃1點' },
+    { char: '0', code: '-----', type: 'number', tip: '5劃 (全長)' }
+];
+
+// --- 硬幣二元樹資料結構 ---
+const decodeTree = {
+    char: '★', x: 400, y: 30, code: '',
+    left: {
+        char: 'E', x: 200, y: 110, code: '.',
+        left: {
+            char: 'I', x: 100, y: 190, code: '..',
+            left: {
+                char: 'S', x: 50, y: 270, code: '...',
+                left: { char: 'H', x: 25, y: 350, code: '....' },
+                right: { char: 'V', x: 75, y: 350, code: '...-' }
+            },
+            right: {
+                char: 'U', x: 150, y: 270, code: '..-',
+                left: { char: 'F', x: 125, y: 350, code: '..-.' },
+                right: null
+            }
+        },
+        right: {
+            char: 'A', x: 300, y: 190, code: '.-',
+            left: {
+                char: 'R', x: 250, y: 270, code: '.-.',
+                left: { char: 'L', x: 225, y: 350, code: '.-..' },
+                right: null
+            },
+            right: {
+                char: 'W', x: 350, y: 270, code: '.--',
+                left: { char: 'P', x: 325, y: 350, code: '.--.' },
+                right: { char: 'J', x: 375, y: 350, code: '.---' }
+            }
+        }
+    },
+    right: {
+        char: 'T', x: 600, y: 110, code: '-',
+        left: {
+            char: 'N', x: 500, y: 190, code: '-.',
+            left: {
+                char: 'D', x: 450, y: 270, code: '-..',
+                left: { char: 'B', x: 425, y: 350, code: '-...' },
+                right: { char: 'X', x: 475, y: 350, code: '-..-' }
+            },
+            right: {
+                char: 'K', x: 550, y: 270, code: '-.-',
+                left: { char: 'C', x: 525, y: 350, code: '-.-.' },
+                right: { char: 'Y', x: 575, y: 350, code: '-.--' }
+            }
+        },
+        right: {
+            char: 'M', x: 700, y: 190, code: '--',
+            left: {
+                char: 'G', x: 650, y: 270, code: '--.',
+                left: { char: 'Z', x: 625, y: 350, code: '--..' },
+                right: { char: 'Q', x: 675, y: 350, code: '--.-' }
+            },
+            right: {
+                char: 'O', x: 750, y: 270, code: '---',
+                left: null,
+                right: null
+            }
+        }
+    }
+};
+
+function renderDecodeTree() {
+    let svgStr = `<svg viewBox="0 0 800 400" style="width: 100%; min-width: 700px; max-width: 800px; display: inline-block;">
+        <style>
+            .t-link { stroke: #ffb300; stroke-width: 3; fill: none; opacity: 0.4; }
+            .t-node { fill: #ffb300; font-size: 20px; font-family: monospace; font-weight: bold; text-anchor: middle; dominant-baseline: middle; cursor: pointer; transition: 0.2s; }
+            .t-node:hover { fill: #fff; font-size: 32px; filter: drop-shadow(0 0 8px #ffb300); }
+            .t-guide { fill: #fff; font-size: 16px; opacity: 0.9; text-anchor: middle; font-weight: bold; }
+            .t-line { stroke: #555; stroke-dasharray: 4; stroke-width: 2; }
+        </style>
+        <!-- 輔助線與文字 -->
+        <line x1="400" y1="20" x2="400" y2="380" class="t-line" />
+        <text x="250" y="50" class="t-guide">← 點 ( . ) 向左</text>
+        <text x="550" y="50" class="t-guide">向右 劃 ( - ) →</text>
+    `;
+
+    function drawNode(node) {
+        if (node.left) {
+            const midY = (node.y + node.left.y) / 2;
+            // 繪製直角折線 (完美還原硬幣的電路佈線感)
+            svgStr += `<path class="t-link" d="M ${node.x} ${node.y + 15} L ${node.x} ${midY} L ${node.left.x} ${midY} L ${node.left.x} ${node.left.y - 15}" />`;
+            drawNode(node.left);
+        }
+        if (node.right) {
+            const midY = (node.y + node.right.y) / 2;
+            svgStr += `<path class="t-link" d="M ${node.x} ${node.y + 15} L ${node.x} ${midY} L ${node.right.x} ${midY} L ${node.right.x} ${node.right.y - 15}" />`;
+            drawNode(node.right);
+        }
+
+        if(node.char === '★') {
+            svgStr += `<text x="${node.x}" y="${node.y}" class="t-node" style="font-size:30px; fill:#fff;">${node.char}</text>`;
+        } else {
+            svgStr += `<text x="${node.x}" y="${node.y}" class="t-node" onmouseover="SoundMgr.playMorse('${node.code}')" onclick="openModalFromTree('${node.char}')"><title>點擊查看 ${node.char} (${node.code})</title>${node.char}</text>`;
+        }
+    }
+
+    drawNode(decodeTree);
+    svgStr += `</svg>`;
+    document.getElementById('svg-tree-container').innerHTML = svgStr;
+}
+
+function openModalFromTree(char) {
+    const item = morseData.find(x => x.char === char);
+    if(item) openModal(item);
+}
+
+// --- 音效管理員 (動態產生摩斯密碼聲音) ---
+const SoundMgr = {
+    enabled: true,
+    ctx: null,
+
+    init: function() {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+    },
+
+    toggle: function() {
+        this.enabled = !this.enabled;
+        const btn = document.querySelector('.audio-ctrl');
+        if(this.enabled) {
+            btn.innerHTML = '🔊 音效: 開';
+            btn.classList.remove('muted');
+            if(!this.ctx) this.init();
+        } else {
+            btn.innerHTML = '🔇 音效: 關';
+            btn.classList.add('muted');
+        }
+    },
+
+    // 播放提示音 (正確/錯誤/點擊)
+    playTone: function(type) {
+        if(!this.enabled || !this.ctx) return;
+        if(this.ctx.state === 'suspended') this.ctx.resume();
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        const now = this.ctx.currentTime;
+        
+        if (type === 'correct') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.setValueAtTime(1200, now + 0.1);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'flip') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        }
+    },
+
+    // 播放摩斯密碼序列
+    playMorse: function(code, onComplete) {
+        if(!this.enabled) {
+            if(onComplete) onComplete();
+            return;
+        }
+        if(!this.ctx) this.init();
+        if(this.ctx.state === 'suspended') this.ctx.resume();
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 750; // 經典摩斯密碼頻率
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        const dotLen = 0.12; // 一個點的長度 (120ms)
+        let time = this.ctx.currentTime + 0.05;
+        
+        // 初始音量設為0
+        gain.gain.setValueAtTime(0, time);
+        
+        for (let i = 0; i < code.length; i++) {
+            const isDash = code[i] === '-';
+            const dur = isDash ? dotLen * 3 : dotLen;
+            
+            // 包絡線 (Envelope) 避免聲音出現爆音(Clicking)
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(1, time + 0.01);
+            gain.gain.setValueAtTime(1, time + dur - 0.01);
+            gain.gain.linearRampToValueAtTime(0, time + dur);
+            
+            time += dur + dotLen; // 符號間的間隔 = 一個點
+        }
+        
+        osc.start(this.ctx.currentTime);
+        osc.stop(time);
+        
+        if (onComplete) {
+            setTimeout(onComplete, (time - this.ctx.currentTime) * 1000);
+        }
+    }
+};
+
+// --- 初始化邏輯 ---
+let dailyItem;
+let currentModalItem = null;
+
+function init() {
+    // 每日一碼
+    const date = new Date();
+    const seed = date.getFullYear() * 10000 + (date.getMonth()+1) * 100 + date.getDate();
+    dailyItem = morseData[seed % morseData.length];
+    
+    document.getElementById('d-char').innerText = dailyItem.char;
+    document.getElementById('d-code').innerText = dailyItem.code;
+    document.getElementById('d-tip').innerText = dailyItem.tip;
+
+    // 預設渲染列表
+    renderList();
+
+    // 渲染硬幣解碼樹
+    renderDecodeTree();
+
+    // 第一次點擊初始化音效 (瀏覽器限制)
+    document.body.addEventListener('click', () => {
+        if(SoundMgr.enabled && !SoundMgr.ctx) SoundMgr.init();
+    }, {once:true});
+}
+
+// --- 翻牌與播放音效 ---
+function flipCard() {
+    const container = document.querySelector('.daily-card-container');
+    const isFlipped = container.classList.contains('flipped');
+    
+    if(!isFlipped) {
+        SoundMgr.playTone('flip');
+        container.classList.add('flipped');
+        // 翻開後自動播音效
+        setTimeout(() => {
+            SoundMgr.playMorse(dailyItem.code);
+        }, 600);
+    } else {
+        // 已經翻開的話，點擊再次播放
+        SoundMgr.playMorse(dailyItem.code);
+    }
+}
+
+// --- 測驗系統 ---
+let qItem;
+let qType; // 1: 聽音辨字, 2: 看字辨碼
+let isPlayingAudio = false;
+
+function initQuiz() {
+    document.getElementById('q-feedback').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+    
+    // 隨機選擇題目與類型 (1 或 2)
+    qItem = morseData[Math.floor(Math.random() * morseData.length)];
+    qType = Math.random() > 0.5 ? 1 : 2;
+
+    const badge = document.getElementById('q-badge');
+    const txtArea = document.getElementById('q-question-text');
+    const btnArea = document.getElementById('q-play-btn');
+    const hint = document.getElementById('q-hint');
+
+    // 準備選項 (保證包含正確答案，且共4個不重複選項)
+    let opts = [qItem];
+    while(opts.length < 4) {
+        let r = morseData[Math.floor(Math.random() * morseData.length)];
+        if(!opts.some(o => o.char === r.char)) opts.push(r);
+    }
+    opts.sort(() => Math.random() - 0.5); // 打亂
+
+    const optionsDiv = document.getElementById('q-options');
+
+    if (qType === 1) {
+        // 類型 1: 聽音辨字
+        badge.innerText = "聽聲音 ➔ 選字母";
+        txtArea.style.display = "none";
+        btnArea.style.display = "inline-flex";
+        hint.innerText = "點擊按鈕播放摩斯密碼聲音";
+        
+        optionsDiv.innerHTML = opts.map(o => 
+            `<button class="q-btn" onclick="checkQuiz(this, '${o.char}')">${o.char}</button>`
+        ).join('');
+
+    } else {
+        // 類型 2: 看字辨碼
+        badge.innerText = "看字母 ➔ 選密碼";
+        txtArea.style.display = "block";
+        txtArea.innerText = qItem.char;
+        btnArea.style.display = "none";
+        hint.innerText = "請選出對應的摩斯密碼 (點擊選項不會發聲)";
+
+        optionsDiv.innerHTML = opts.map(o => 
+            `<button class="q-btn" style="font-family:monospace; font-size:2rem;" onclick="checkQuiz(this, '${o.code}')">${o.code}</button>`
+        ).join('');
+    }
+}
+
+function playQuizAudio() {
+    if (isPlayingAudio || qType !== 1) return;
+    const btn = document.getElementById('q-play-btn');
+    btn.classList.add('playing');
+    isPlayingAudio = true;
+    
+    SoundMgr.playMorse(qItem.code, () => {
+        btn.classList.remove('playing');
+        isPlayingAudio = false;
+    });
+}
+
+function checkQuiz(btn, ans) {
+    const btns = document.querySelectorAll('.q-btn');
+    if(btn.disabled) return;
+
+    // 禁用所有按鈕
+    btns.forEach(b => b.disabled = true);
+    
+    const fb = document.getElementById('q-feedback');
+    const nextBtn = document.getElementById('next-btn');
+    fb.style.display = 'block';
+    nextBtn.style.display = 'inline-block';
+
+    // 判斷正確與否 (ans 是使用者選的，要與 qItem 比較)
+    const isCorrect = (qType === 1) ? (ans === qItem.char) : (ans === qItem.code);
+
+    if(isCorrect) {
+        SoundMgr.playTone('correct');
+        btn.classList.add('correct');
+        fb.style.background = '#e8f5e9';
+        fb.style.color = '#2e7d32';
+        fb.innerHTML = `✅ <b>答對了！</b><br>【${qItem.char}】的密碼是 ${qItem.code}<br><small>${qItem.tip}</small>`;
+    } else {
+        SoundMgr.playTone('wrong');
+        btn.classList.add('wrong');
+        
+        // 標示出正確答案
+        btns.forEach(b => { 
+            const targetAns = (qType === 1) ? qItem.char : qItem.code;
+            if(b.innerText === targetAns) b.classList.add('correct'); 
+        });
+
+        fb.style.background = '#ffebee';
+        fb.style.color = '#c62828';
+        fb.innerHTML = `❌ <b>答錯了！</b><br>正確答案是 【${qItem.char}】 = ${qItem.code}<br><small>${qItem.tip}</small>`;
+    }
+}
+
+// --- 圖鑑列表 ---
+function renderList() {
+    const grid = document.getElementById('list-grid');
+    const typeFilter = document.getElementById('type-filter').value;
+    const kw = document.getElementById('keyword').value.toUpperCase(); // 轉大寫比對
+    
+    const list = morseData.filter(x => {
+        const matchType = (typeFilter === 'all') || (x.type === typeFilter);
+        const matchKw = x.char.includes(kw) || x.code.includes(kw);
+        return matchType && matchKw;
+    });
+    
+    grid.innerHTML = list.map(item => `
+        <div class="grid-item" onclick='openModal(${JSON.stringify(item)})'>
+            <div class="char">${item.char}</div>
+            <div class="code">${item.code}</div>
+        </div>
+    `).join('');
+
+    if(list.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px; color:#888;">找不到相符的密碼</div>`;
+    }
+}
+
+function openModal(item) {
+    SoundMgr.playTone('click');
+    currentModalItem = item;
+    document.getElementById('m-char').innerText = item.char;
+    document.getElementById('m-code').innerText = item.code;
+    document.getElementById('m-tip').innerText = item.tip;
+    document.getElementById('modal').style.display = 'flex';
+    
+    // 開啟後稍微延遲自動播放音效
+    setTimeout(() => { playModalAudio(); }, 300);
+}
+
+function playModalAudio() {
+    if(currentModalItem) {
+        SoundMgr.playMorse(currentModalItem.code);
+    }
+}
+
+function closeModal() { 
+    document.getElementById('modal').style.display = 'none'; 
+    currentModalItem = null;
+}
+
+// --- 頁籤切換 ---
+function setTab(id, btn) {
+    SoundMgr.playTone('click');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-'+id).classList.add('active');
+    btn.classList.add('active');
+    
+    if(id === 'quiz') initQuiz();
+}
+
+window.onload = init;
+</script>
+
+</body>
+</html>
